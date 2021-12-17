@@ -1,7 +1,9 @@
 #include "pipe_networking.h"
-
+static void sighandler(int signo);
 
 int main() {
+  signal(SIGINT, sighandler);
+
   int to_server;
   int from_server;
   char buffer[BUFFER_SIZE];
@@ -21,4 +23,11 @@ int main() {
 		printf("received: -%s-\n", buffer);
   }
   return 0;
+}
+
+static void sighandler(int signo) {
+  if (signo == SIGINT) {
+    remove(WKP);
+    exit(EXIT_SUCCESS);
+  }
 }
