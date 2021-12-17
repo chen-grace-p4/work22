@@ -10,7 +10,21 @@
   returns the file descriptor for the upstream pipe.
   =========================*/
 int server_setup() {
-  int from_client = 0;
+  int b, from_client;
+
+  printf("[server] handshake: making wkp\n");
+  b = mkfifo(WKP, 0600);
+  if ( b == -1 ) {
+    printf("mkfifo error %d: %s\n", errno, strerror(errno));
+    exit(-1);
+  }
+  //open & block
+  from_client = open(WKP, O_RDONLY, 0);
+  //remove WKP
+  remove(WKP);
+
+  printf("[server] handshake: removed wkp\n");
+
   return from_client;
 }
 
@@ -22,6 +36,30 @@ int server_setup() {
   =========================*/
 int server_connect(int from_client) {
   int to_client  = 0;
+  int b;
+  char buffer[HANDSHAKE_BUFFER_SIZE];
+
+  //read initial message
+  b = read(from_client, buffer, sizeof(buffer));
+  printf("[server] handshake received: -%s-\n", buffer);
+
+
+  to_client = open(buffer, O_WRONLY, 0);
+  //create SYN_ACK message
+  srand(time(NULL));
+  int r = rand() % HANDSHAKE_BUFFER_SIZE;
+  sprintf(buffer, "%d", r);
+
+  write(to_client, buffer, sizeof(buffer));
+  //rad and check ACK
+  read(from_client, buffer, sizeof(buffer));
+  int ra = atoi(buffer);
+  if (ra != r+1) {
+    printf("[server] handshake received bad ACK: -%s-\n", buffer);
+    exit(0);
+  }//bad response
+  printf("[server] handshake received: -%s-\n", buffer);
+  
   return to_client;
 }
 
